@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { serve } from '@hono/node-server'
+
 
 import {cors} from 'hono/cors'
 import { connectDB } from './db/connection'
@@ -13,4 +13,4 @@ app.get('/', async(c) => {
   return c.text(`Note taker api is running on port ${process.env.PORT}`)
 })
 
-serve(app)
+export default app
