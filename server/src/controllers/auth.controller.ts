@@ -1,125 +1,104 @@
-import { Context } from 'hono'
-import { sign } from 'hono/jwt'
-import * as bcrypt from 'bcryptjs'
-import { User, IUser } from '../models/user.model'
-import { randomBytes } from 'crypto'
+import { Context, Hono } from "hono";
+import { User } from "../models/user.model";
+import * as bcrypt from 'bcryptjs';
+import { sign } from "hono/jwt";
 
-interface AuthPayload {
-  email: string
-  password: string
+interface AuthRequest {
+  email: string;
+  password: string;
 }
 
-interface JwtPayload {
-  userId: string
-}
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key'
+const validatePassword = (password: string): { isValid: boolean; requirements: Record<string, boolean> } => {
+  const requirements = {
+    minLength: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    numbers: /\d/.test(password),
+    specialCharacters: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  };
 
-export const signUp = async (c: Context) => {
+  const isValid = Object.values(requirements).every(Boolean);
+  return { isValid, requirements };
+};
+
+const signupHandler = async (c: Context) => {
+  const { email, password }: AuthRequest = await c.req.json();
+  
+  if (!email || !password) {
+    return c.json({ error: 'Email and password are required' }, 400);
+  }
+
+  if (!validateEmail(email)) {
+    return c.json({ error: 'Invalid email format' }, 400);
+  }
+
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    return c.json({
+      error: 'Password must be at least 8 characters long and contain uppercase, lowercase, numbers, and special characters',
+      requirements: passwordValidation.requirements
+    }, 400);
+  }
+
   try {
-    const { email, password }: AuthPayload = await c.req.json()
-    
-    const existingUser = await User.findOne({ email })
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return c.json({ error: 'User already exists' }, 409)
+      return c.json({ error: 'Email already exists' }, 409);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
-    
-    const newUser = new User({
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
       email,
       password: hashedPassword
-    })
-    
-    await newUser.save()
-    
-    const token = await sign({ userId: (newUser._id as string).toString() }, JWT_SECRET)
+    });
 
-    return c.json({ 
-        "message": "User registered successfully",
-      token,
-      user: {
-        id: newUser._id,
-        email: newUser.email
-      }
-    }, 201)
+    newUser.save();
+
+    return c.json({ message: 'Signup successful' }, 201);
   } catch (error) {
-    return c.json({ error: 'Registration failed' }, 400)
+    if ((error as { code?: string }).code === '23505') {
+      return c.json({ error: 'Email already exists' }, 409);
+    }
+    console.error('Error creating user:', error);
+    return c.json({ error: 'Failed to create user' }, 500);
   }
-}
+};
 
-export const signIn = async (c: Context) => {
+const signinHandler = async (c: Context) => {
+  const { email, password }: AuthRequest = await c.req.json();
+
+  if (!email || !password) {
+    return c.json({ error: 'Email and password are required' }, 400);
+  }
+
   try {
-    const { email, password } = await c.req.json()
-    
-    const user = await User.findOne({ email })
-    if (!user) {
-      return c.json({ error: 'Invalid credentials' }, 401)
+    const user = await User.findOne({ 
+      email: email.toLowerCase()
+    });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return c.json({ error: 'Invalid credentials' }, 401);
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password)
-    if (!isValidPassword) {
-      return c.json({ error: 'Invalid credentials' }, 401)
-    }
+    const token = await sign({ userId: user.id.toString() }, process.env.JWT_SECRET!);
 
-    const token = await sign({ userId: (user._id as string).toString() }, JWT_SECRET)
-
-    return c.json({ 
-        "message": "User logged in successfully",
+    return c.json({
+      message: 'Signin successful',
       token,
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email
       }
-    })
+    }, 200);
   } catch (error) {
-    return c.json({ error: 'Login failed' }, 400)
+    console.error('Signin error:', error);
+    return c.json({ error: 'An error occurred during signin' }, 500);
   }
-}
+};
 
-export const getCurrentUser = async (c: Context) => {
-  try {
-    const jwtPayload = c.get('jwtPayload')
-    const user = await User.findById(jwtPayload.userId).select('-password')
-    
-    if (!user) {
-      return c.json({ error: 'User not found' }, 404)
-    }
-    
-    return c.json(user)
-  } catch (error) {
-    return c.json({ error: 'Unauthorized' }, 401)
-  }
-}
-
-// Update the User model interface reference
-
-
-// Fix the forgotPassword implementation
-export const forgotPassword = async (c: Context) => {
-  try {
-    const { email } = await c.req.json()
-
-    const user = await User.findOne({ email }) as IUser
-    if (!user) {
-      return c.json({ error: 'User not found' }, 404)
-    }
-
-    const resetToken = randomBytes(32).toString('hex')
-    const resetTokenExpiry = new Date(Date.now() + 3600000)
-
-    user.resetToken = resetToken
-    user.resetTokenExpiry = resetTokenExpiry
-    await user.save()
-
-    // Add proper error handling for email sending
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
-    
-    return c.json({ 
-      message: 'Password reset instructions sent to email',
-      resetToken // Remove in production
-    }, 200)
-  } catch (error) {
-    return c.json({ error: 'Password reset failed' }, 500)
-  }
-}
+export { signupHandler, signinHandler };
