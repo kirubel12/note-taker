@@ -1,7 +1,7 @@
 import { Context, Hono } from "hono";
 import { User } from "../models/user.model";
 import * as bcrypt from 'bcryptjs';
-import { sign } from "hono/jwt";
+import { jwt, sign } from "hono/jwt";
 
 interface AuthRequest {
   email: string;
@@ -85,11 +85,11 @@ const signinHandler = async (c: Context) => {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
 
-    const token = await sign({ userId: user.id.toString() }, process.env.JWT_SECRET!);
+   const token = await sign({ id: user.id.toString() }, process.env.JWT_SECRET!);
 
     return c.json({
       message: 'Signin successful',
-      token,
+      "token": token,
       user: {
         id: user.id,
         email: user.email
@@ -101,4 +101,19 @@ const signinHandler = async (c: Context) => {
   }
 };
 
-export { signupHandler, signinHandler };
+const getMe = async (c: Context) => {
+  try {
+    const user = c.get('user');
+    return c.json({
+      user: {
+        id: user.id,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return c.json({ error: 'Failed to fetch user data' }, 500);
+  }
+}
+
+export { signupHandler, signinHandler, getMe };

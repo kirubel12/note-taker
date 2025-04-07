@@ -3,7 +3,13 @@ import { Note } from '../models/note.model'
 
 export const getAllNotes = async (c: Context) => {
   try {
-    const notes = await Note.find()
+    const userId = c.get("jwtPayload");
+    // if (!userId) {
+    //   return c.json({ error: 'Unauthorized' }, 401)  
+    // }
+    console.log(userId) // for develo
+
+    const notes = await Note.find();
     
     return c.json({
       data: notes,

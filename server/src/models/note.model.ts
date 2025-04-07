@@ -3,7 +3,11 @@ import { Schema, model, Document, Types } from 'mongoose'
 export interface INote extends Document {
   title: string
   content: string
-  user: Types.ObjectId
+  user:{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
   createdAt: Date
   updatedAt: Date
 }
