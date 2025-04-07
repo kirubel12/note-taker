@@ -3,13 +3,20 @@ import { Note } from '../models/note.model'
 
 export const getAllNotes = async (c: Context) => {
   try {
-    const userId = c.get("jwtPayload");
-    // if (!userId) {
-    //   return c.json({ error: 'Unauthorized' }, 401)  
-    // }
-    console.log(userId) // for develo
+    const {id} = c.get('user');
 
-    const notes = await Note.find();
+    if (!id){
+      return c.json({
+        error: 'Not authenticated' 
+      })
+    }
+    const notes = await Note.find({user: id}).lean().exec();
+
+    if (!notes || notes.length === 0) {
+      return c.json({
+        message: 'No notes found for the user'
+      }, 404)
+    }
     
     return c.json({
       data: notes,
@@ -23,6 +30,13 @@ export const getAllNotes = async (c: Context) => {
 
 export const getNoteById = async (c: Context) => {
   try {
+    const {id} = c.get('user');
+
+    if (!id){
+      return c.json({
+        error: 'Not authenticated'
+      })
+    }
     const noteId = c.req.param('id')
     const note = await Note.findById(noteId).lean().exec()
     
@@ -39,6 +53,13 @@ export const getNoteById = async (c: Context) => {
 
 export const createNote = async (c: Context) => {
   try {
+    const user = c.get('user');
+
+    if (!user.id){
+      return c.json({
+        error: 'Not authenticated'
+      })
+    }
     const { title, content } = await c.req.json()
     
     if (!title?.trim() || !content?.trim()) {
@@ -48,6 +69,7 @@ export const createNote = async (c: Context) => {
     }
 
     const newNote = await Note.create({
+      user: user.id,
       title: title.trim(),
       content: content.trim(),
       updatedAt: new Date()
@@ -65,8 +87,27 @@ export const createNote = async (c: Context) => {
 
 export const updateNote = async (c: Context) => {
   try {
+    const user = c.get('user');
+
+    if (!user.id){
+      return c.json({
+        error: 'Not authenticated'
+      })
+    }
     const noteId = c.req.param('id')
     const { title, content } = await c.req.json()
+    
+    // First find the note to check ownership
+    const existingNote = await Note.findById(noteId);
+    
+    if (!existingNote) {
+      return c.json({ error: 'Note not found' }, 404)
+    }
+
+    // Check if the current user is the creator of the note
+    if (existingNote.user.toString() !== user.id) {
+      return c.json({ error: 'Unauthorized to update this note' }, 403)
+    }
     
     const updatedNote = await Note.findByIdAndUpdate(
       noteId,
@@ -77,10 +118,6 @@ export const updateNote = async (c: Context) => {
       },
       { new: true, runValidators: true }
     ).exec()
-
-    if (!updatedNote) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
 
     return c.json({
       message: 'Note successfully updated',
@@ -94,9 +131,24 @@ export const updateNote = async (c: Context) => {
 
 export const deleteNote = async (c: Context) => {
   try {
-    const noteId = c.req.param('id')
-    const deletedNote = await Note.findByIdAndDelete(noteId)
+    const user = c.get('user');
 
+    if (!user.id){
+      return c.json({
+        error: 'Not authenticated'
+      })
+    }
+    const noteId = c.req.param('id')
+    const note = await Note.findById(noteId);
+    if (!note) {
+      return c.json({ error: 'Note not found' }, 404);
+    }
+    
+    if (note.user.toString() !== user.id) {
+      return c.json({ error: 'Unauthorized to delete this note' }, 403);
+    }
+    
+    const deletedNote = await Note.findByIdAndDelete(noteId);
     if (!deletedNote) {
       return c.json({ error: 'Note not found' }, 404)
     }
