@@ -1,20 +1,14 @@
 import { Context } from 'hono'
 import { Note } from '../models/note.model'
 
-/**
- * Controller methods for Note operations
- * Implements RESTful endpoints for CRUD operations
- */
-
 export const getAllNotes = async (c: Context) => {
   try {
     const notes = await Note.find()
     
     return c.json({
-        "data": notes,
-        "message": "Notes successfully retrieved"
-        ,
-    },200)
+      data: notes,
+      message: "Notes successfully retrieved"
+    }, 200)
   } catch (error) {
     console.error('Error fetching notes:', error)
     return c.json({ error: 'Internal server error' }, 500)
@@ -30,7 +24,7 @@ export const getNoteById = async (c: Context) => {
       return c.json({ error: 'Note not found' }, 404)
     }
     
-    return c.json(note)
+    return c.json({ data: note })
   } catch (error) {
     console.error('Error fetching note:', error)
     return c.json({ error: 'Invalid note ID format' }, 400)
@@ -53,9 +47,9 @@ export const createNote = async (c: Context) => {
       updatedAt: new Date()
     })
 
-    return c.json({
+    return c.json({ 
       message: 'Note successfully created',
-      data: newNote
+      data: newNote 
     }, 201)
   } catch (error) {
     console.error('Error creating note:', error)
@@ -68,23 +62,19 @@ export const updateNote = async (c: Context) => {
     const noteId = c.req.param('id')
     const { title, content } = await c.req.json()
     
-    // Get existing note data
-    const existingNote = await Note.findById(noteId).lean().exec()
-    
-    if (!existingNote) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
-
-    // Use existing values if new ones aren't provided
     const updatedNote = await Note.findByIdAndUpdate(
       noteId,
       {
-        title: title?.trim() || existingNote.title,
-        content: content?.trim() || existingNote.content,
+        title: title?.trim(),
+        content: content?.trim(),
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
     ).exec()
+
+    if (!updatedNote) {
+      return c.json({ error: 'Note not found' }, 404)
+    }
 
     return c.json({
       message: 'Note successfully updated',
@@ -99,7 +89,7 @@ export const updateNote = async (c: Context) => {
 export const deleteNote = async (c: Context) => {
   try {
     const noteId = c.req.param('id')
-    const deletedNote = await Note.findByIdAndDelete(noteId).exec()
+    const deletedNote = await Note.findByIdAndDelete(noteId)
 
     if (!deletedNote) {
       return c.json({ error: 'Note not found' }, 404)
@@ -107,12 +97,10 @@ export const deleteNote = async (c: Context) => {
 
     return c.json({ 
       message: 'Note successfully deleted',
-      id: noteId 
+      data: { id: noteId } 
     })
   } catch (error) {
     console.error('Error deleting note:', error)
     return c.json({ error: 'Invalid note ID format' }, 400)
   }
 }
-
-

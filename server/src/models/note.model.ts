@@ -1,8 +1,9 @@
-import { Schema, model, Document } from 'mongoose'
+import { Schema, model, Document, Types } from 'mongoose'
 
 export interface INote extends Document {
   title: string
   content: string
+  user: Types.ObjectId
   createdAt: Date
   updatedAt: Date
 }
@@ -10,8 +11,7 @@ export interface INote extends Document {
 const NoteSchema = new Schema<INote>({
   title: { type: String, required: true },
   content: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-})
+  user: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+}, { timestamps: true })
 
 export const Note = model<INote>('Note', NoteSchema)
