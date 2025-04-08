@@ -6,6 +6,8 @@ import Link from "next/link"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 import { Button } from "@/components/ui/button"
 import {
@@ -64,9 +66,12 @@ export default function RegisterPage() {
         throw new Error(result.error)
       }
 
+      toast.success('Account created successfully!')
       router.push("/auth/login?registered=true")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred"
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -74,6 +79,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <ToastContainer position="top-right" autoClose={5000} />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>

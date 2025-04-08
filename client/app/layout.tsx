@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import NextTopLoader from 'nextjs-toploader';
+import { ToastContainer, toast } from 'react-toastify';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["400", "600", "800"]
 });
 
 
@@ -17,18 +19,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable}  antialiased`}
-      >
-                <NextTopLoader />
-
-        {children}
+      <body className={poppins.className}>
+      
+         
+          <NextTopLoader />
+          {children}
+          <ToastContainer />
+      
       </body>
     </html>
-  );
+  )
 }

@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { useAuthStore } from "@/lib/store/auth-store"
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,9 +20,9 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { login } from "@/actions/auth"
+import { useEffect } from "react"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -29,9 +31,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
+  const { login, isLoading, error } = useAuthStore()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -41,26 +41,25 @@ export default function LoginPage() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-    setError(null)
-    
     try {
-      const result = await login(values.email, values.password)
-      
-      if (result.error) {
-        throw new Error(result.error)
-      }
-
+      await login(values.email, values.password)
+      toast.success('Successfully logged in!')
       router.push("/")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred")
-    } finally {
-      setIsLoading(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to login')
     }
   }
 
+  // Show error from store as toast
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <ToastContainer position="top-right" autoClose={3000} />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
@@ -69,13 +68,6 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField

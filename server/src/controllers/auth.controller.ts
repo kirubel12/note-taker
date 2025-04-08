@@ -57,9 +57,16 @@ const signupHandler = async (c: Context) => {
       password: hashedPassword
     });
 
-    newUser.save();
+    const token = await sign({ id: newUser.id.toString() }, process.env.JWT_SECRET!);
 
-    return c.json({ message: 'Signup successful' }, 201);
+    return c.json({ 
+      message: 'Signup successful',
+      token,
+      user: {
+        id: newUser.id,
+        email: newUser.email
+      }
+    }, 201);
   } catch (error) {
     if ((error as { code?: string }).code === '23505') {
       return c.json({ error: 'Email already exists' }, 409);
