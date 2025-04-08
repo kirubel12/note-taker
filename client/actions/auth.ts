@@ -4,11 +4,12 @@ import { fetchWrapper } from '@/hooks/fetchwrapper'
 import { redirect } from 'next/navigation'
 
 export type AuthResponse = {
+  message: string
+  token: string
   user: {
     id: string
     email: string
   }
-  token: string
 }
 
 export async function signup(email: string, password: string) {
@@ -19,6 +20,7 @@ export async function signup(email: string, password: string) {
     })
     
     return { 
+      token: data.token,
       user: data.user,
       error: null 
     }
@@ -37,7 +39,6 @@ export async function login(email: string, password: string) {
       password
     })
 
-    // Store token in localStorage through client-side code
     if (typeof window !== 'undefined') {
       localStorage.setItem('token', data.token)
     }
@@ -51,6 +52,21 @@ export async function login(email: string, password: string) {
       user: null,
       error: error instanceof Error ? error.message : 'Login failed'
     }
+  }
+}
+
+export async function getCurrentUser() {
+  try {
+    const data = await fetchWrapper.get<{
+      user: {
+        id: string
+        email: string
+      }
+    }>('/auth/me', true) // Add true to require authentication
+    
+    return data.user
+  } catch (error) {
+    return null
   }
 }
 

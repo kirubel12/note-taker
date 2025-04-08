@@ -50,6 +50,7 @@ export default function LoginPage() {
       if (result.error) {
         throw new Error(result.error)
       }
+      console.log(result)
 
       router.push("/")
     } catch (err) {
