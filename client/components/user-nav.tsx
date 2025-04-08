@@ -1,30 +1,22 @@
 "use client"
-import { useEffect, useState } from "react"
-import { CreditCard, LogOut, Settings, User } from "lucide-react"
-import { getCurrentUser } from "@/actions/auth"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { useAuthStore } from '@/lib/store/auth-store'
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { User, CreditCard, Settings, LogOut } from "lucide-react"
 
 export function UserNav() {
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null)
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const currentUser = await getCurrentUser()
-      setUser(currentUser)
-    }
-    fetchUser()
-  }, [])
-
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -64,9 +56,11 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+        <DropdownMenuItem asChild>
+          <Button onClick={logout} className="w-full justify-start">
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

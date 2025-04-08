@@ -3,8 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import NextTopLoader from 'nextjs-toploader';
 import { ToastContainer, toast } from 'react-toastify';
-import { store } from "@/lib/store";
-import { Provider } from "react-redux";
+
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -25,13 +24,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Provider store={store}>
+      <body className={poppins.className}>
+      
          
           <NextTopLoader />
           {children}
           <ToastContainer />
-        </Provider>
+      
       </body>
     </html>
   )

@@ -44,6 +44,7 @@ export async function login(email: string, password: string) {
     }
     
     return { 
+      token: data.token,
       user: data.user,
       error: null 
     }
